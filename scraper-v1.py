@@ -13,17 +13,22 @@ from BeautifulSoup import BeautifulSoup
 
 
 #CHANGE THESE VARIABLES IF YOU WANT ANOTHER SECURITY'S DATA
-googleSecurityIdentifier = "NSE:ACC"
+googleSecurityIdentifier = "NASDAQ:GOOG"
 filename = googleSecurityIdentifier.replace(":","") + ".csv"
-lastPageNumber = 1350
 rowsPerPage = 30
 
 #Opens the file to write data
 FILE = open(filename, "w")
 
+#variable to store when to end the loop
+endLoop = 0
+
+#variable to loop through all the availble data pages
+curPage = 0
+
 #Loops through all the pages of historical data available
-for i in range(0,lastPageNumber+rowsPerPage,rowsPerPage):
-	urlStr = "http://www.google.com/finance/historical?q=" + googleSecurityIdentifier + "&startdate=Jan%201%2C%202006&enddate=Jun%2028%2C%202011&num=" + str(rowsPerPage) +"&start="+str(i)
+while(endLoop == 0):
+	urlStr = "http://www.google.com/finance/historical?q=" + googleSecurityIdentifier + "&startdate=Jan%201%2C%202006&enddate=Jun%2028%2C%202011&num=" + str(rowsPerPage) +"&start="+str(curPage)
 	print "Accessing ..." + urlStr
 	#Query the url and store the html data in page
 	page = urllib2.urlopen(urlStr)
@@ -31,36 +36,44 @@ for i in range(0,lastPageNumber+rowsPerPage,rowsPerPage):
 	#Using Beautiful Soup to store the html structure in soup
 	soup = BeautifulSoup(page)
 
-	#find all the table tags and then pick the third tag from the beginning
-	dataTable = soup.findAll('table')[2]
+	#find all the table tags
+	dataTables = soup.findAll('table')
+	
+	#Check to see if the table containing the historical data exists. If not, exit the loop
+	if(len(dataTables) > 2):
+	
+		#Pick the third tag from the beginning
+		dataTable = dataTables[2]
 
-	#These variables are used to determine when to write a line in the FILE
-	pos = 0
-	li = []
+		#These variables are used to determine when to write a line in the FILE
+		pos = 0
+		li = []
 
-	#Loop through each 'td' tag in the third 'table'
-	for rows in dataTable.findAll('td'):
-		#Extract the contents of each td. The contents are Date, Open, High, Low, Close and Volume
-		val = rows.contents[0]
-		val = val.replace('\n','')
-		
-		#Only write to file when you have a complete line of Date, Open, High, Low, Close and Volume
-		if pos < 5:
-			#Keep storing the contents until there is a complete line
-			li.append(val)
-			pos = pos + 1
-		else:
-			#Write to file all the contents
-			rowStr = ""
-			for element in li:
-				rowStr = rowStr + element + "," 
-			#String containing a line to write to file
-			rowStr = rowStr + val + "\n"
-			FILE.write(rowStr)
-			#Empty the variables to start building the next line
-			li = []
-			pos = 0
-			print "String written to FILE: " + rowStr
-
+		#Loop through each 'td' tag in the third 'table'
+		for rows in dataTable.findAll('td'):
+			#Extract the contents of each td. The contents are Date, Open, High, Low, Close and Volume
+			val = rows.contents[0]
+			val = val.replace('\n','')
+			
+			#Only write to file when you have a complete line of Date, Open, High, Low, Close and Volume
+			if pos < 5:
+				#Keep storing the contents until there is a complete line
+				li.append(val)
+				pos = pos + 1
+			else:
+				#Write to file all the contents
+				rowStr = ""
+				for element in li:
+					rowStr = rowStr + element + "," 
+				#String containing a line to write to file
+				rowStr = rowStr + val + "\n"
+				FILE.write(rowStr)
+				#Empty the variables to start building the next line
+				li = []
+				pos = 0
+				print "String written to FILE: " + rowStr
+	else:
+		endLoop = 1
+	curPage = curPage + rowsPerPage
 #Close the file
 FILE.close()
